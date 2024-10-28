@@ -1,0 +1,93 @@
+from flask import Flask, request, jsonify
+import datetime
+import pymysql
+
+app = Flask(__name__)
+
+# ---connect to database--- #
+def get_db_connection():
+    return pymysql.connect(
+        host='192.168.102.107',                     #-host ip
+        user='admin',                               #-user name
+        password='1234',                            #-password
+        database='intern',                          #-database name
+        cursorclass=pymysql.cursors.DictCursorclear
+    )
+
+#--POST method write data to databases--#
+@app.route('/parking_events', methods=['POST'])
+def insert_parking_event():
+    data = request.get_json()
+
+    # Validate the input data
+    if not data or 'Area' not in data or 'Date' not in data or 'Time' not in data or 'Free-Space' not in data:
+        return jsonify({"error": "Invalid input"}), 400
+
+    area = data['Area']
+    event_date = data['Date']
+    event_time = data['Time']
+    free_space = data['Free-Space']
+
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Check if the area exists in the parking_areas table
+        check_area_query = "SELECT * FROM parking_areas WHERE area_name = %s"
+        cursor.execute(check_area_query, (area,))
+        area_record = cursor.fetchone()
+
+        if not area_record:
+            return jsonify({"error": "Unknown area"}), 400
+
+        # Insert the parking event into the table
+        query = """
+        INSERT INTO parking_events (Area, Date, Time, `Free-Space`)
+        VALUES (%s, %s, %s, %s)
+        """
+        cursor.execute(query, (area, event_date, event_time, free_space))
+
+        # Commit the transaction
+        connection.commit()
+        return jsonify({"message": "Parking event inserted successfully!"}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+#--GET methods read data from databases--#
+@app.route('/parking_events', methods=['GET'])
+def get_parking_events():
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM parking_events")
+        parking_events = cursor.fetchall()
+
+        # Convert all datetime and timedelta objects to strings
+        for event in parking_events:
+            if isinstance(event['Time'], datetime.timedelta):
+                event['Time'] = str(event['Time'])  # Convert to string
+            if isinstance(event['Date'], datetime.date):
+                event['Date'] = event['Date'].isoformat()  # Convert to YYYY-MM-DD
+        return jsonify(parking_events), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+#--main--#
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
