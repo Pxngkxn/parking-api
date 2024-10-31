@@ -7,14 +7,14 @@ app = Flask(__name__)
 # ---connect to database--- #
 def get_db_connection():
     return pymysql.connect(
-        host='192.168.102.107',                     #-host ip
-        user='admin',                               #-user name
-        password='1234',                            #-password
-        database='internship_project',                          #-database name
+        host='192.168.102.108',  # Host IP
+        user='admin',            # Username
+        password='1234',         # Password
+        database='internship_project',  # Database name
         cursorclass=pymysql.cursors.DictCursor
     )
 
-#--POST method write data to databases--#
+# --POST method to write data to the database-- #
 @app.route('/parking_events', methods=['POST'])
 def insert_parking_event():
     data = request.get_json()
@@ -61,7 +61,7 @@ def insert_parking_event():
         if connection:
             connection.close()
 
-#--GET methods read data from databases--#
+# --GET method to read data from the parking_events table-- #
 @app.route('/parking_events', methods=['GET'])
 def get_parking_events():
     connection = None
@@ -88,6 +88,27 @@ def get_parking_events():
         if connection:
             connection.close()
 
-#--main--#
+# --GET method to read data from the parking_areas table-- #
+@app.route('/parking_areas', methods=['GET'])
+def get_parking_areas():
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM parking_areas")
+        parking_areas = cursor.fetchall()
+
+        return jsonify(parking_areas), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+# --main-- #
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
