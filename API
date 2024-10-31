@@ -10,8 +10,8 @@ def get_db_connection():
         host='192.168.102.107',                     #-host ip
         user='admin',                               #-user name
         password='1234',                            #-password
-        database='intern',                          #-database name
-        cursorclass=pymysql.cursors.DictCursorclear
+        database='internship_project',                          #-database name
+        cursorclass=pymysql.cursors.DictCursor
     )
 
 #--POST method write data to databases--#
